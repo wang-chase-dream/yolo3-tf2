@@ -69,7 +69,8 @@ if __name__ == "__main__":
     #   网络一般不从0开始训练，至少会使用主干部分的权值，有些论文提到可以不用预训练，主要原因是他们 数据集较大 且 调参能力优秀。
     #   如果一定要训练网络的主干部分，可以了解imagenet数据集，首先训练分类模型，分类模型的 主干部分 和该模型通用，基于此进行训练。
     #----------------------------------------------------------------------------------------------------------------------------#
-    model_path      = 'model_data/yolo_weights.h5'
+    # model_path      = 'model_data/yolo_weights.h5'
+    model_path = ''
     #------------------------------------------------------#
     #   输入的shape大小，一定要是32的倍数
     #------------------------------------------------------#
@@ -255,7 +256,9 @@ if __name__ == "__main__":
 
         else:
             model.compile(optimizer=Adam(lr = lr), loss={'yolo_loss': lambda y_true, y_pred: y_pred})
-
+            print("::::::::::::::::::::::::::::::::::")
+            model.summary()
+            print("::::::::::::::::::::::::::::::::::")
             model.fit_generator(
                 generator           = train_dataloader,
                 steps_per_epoch     = epoch_step,

@@ -14,6 +14,7 @@ from utils.utils import compose
 def DarknetConv2D(*args, **kwargs):
     darknet_conv_kwargs = {'kernel_initializer' : RandomNormal(stddev=0.02), 'kernel_regularizer': l2(5e-4)}
     darknet_conv_kwargs['padding'] = 'valid' if kwargs.get('strides')==(2, 2) else 'same'
+    # The method update() adds dictionary dict2's key-values pairs in to dict.
     darknet_conv_kwargs.update(kwargs)
     return Conv2D(*args, **darknet_conv_kwargs)
 

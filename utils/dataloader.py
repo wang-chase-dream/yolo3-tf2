@@ -22,6 +22,7 @@ class YoloDatasets(keras.utils.Sequence):
         self.train              = train
 
     def __len__(self):
+        # Round a number upward to its nearest integer:
         return math.ceil(len(self.annotation_lines) / float(self.batch_size))
 
     def __getitem__(self, index):
