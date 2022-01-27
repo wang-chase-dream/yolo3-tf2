@@ -27,6 +27,7 @@ def make_yolo_head(x, num_filters, out_filters):
 #   FPN网络的构建，并且获得预测结果
 #---------------------------------------------------#
 def yolo_body(input_shape, anchors_mask, num_classes):
+    print("yolo_body()")
     inputs      = Input(input_shape)
     #---------------------------------------------------#   
     #   生成darknet53的主干模型
@@ -43,8 +44,9 @@ def yolo_body(input_shape, anchors_mask, num_classes):
     #---------------------------------------------------#
     # 13,13,1024 -> 13,13,512 -> 13,13,1024 -> 13,13,512 -> 13,13,1024 -> 13,13,512
     x   = make_five_conv(C5, 512)
+    print("P5_output: {}".format(len(anchors_mask[0]) * (num_classes+5)))
     P5  = make_yolo_head(x, 512, len(anchors_mask[0]) * (num_classes+5))
-
+    print("P5.shape: {}".format(P5.shape))
     # 13,13,512 -> 13,13,256 -> 26,26,256
     x   = compose(DarknetConv2D_BN_Leaky(256, (1,1)), UpSampling2D(2))(x)
 
@@ -69,7 +71,7 @@ def yolo_body(input_shape, anchors_mask, num_classes):
     # 52,52,384 -> 52,52,128 -> 52,52,256 -> 52,52,128 -> 52,52,256 -> 52,52,128
     x   = make_five_conv(x, 128)
     P3  = make_yolo_head(x, 128, len(anchors_mask[2]) * (num_classes+5))
-    return Model(inputs, [P5, P4, P3])
+    return Model(inputs, [P5, P4, P3], name = "yolo_body")
 
 
 def get_train_model(model_body, input_shape, num_classes, anchors, anchors_mask):
