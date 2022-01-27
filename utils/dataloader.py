@@ -81,6 +81,7 @@ class YoloDatasets(keras.utils.Sequence):
         #------------------------------#
         #   获得预测框
         #------------------------------#
+        # list(map(int,box.split(',')))) 把 str 转换成 int [1,2,3,4]
         box     = np.array([np.array(list(map(int,box.split(',')))) for box in line[1:]])
 
         if not random:

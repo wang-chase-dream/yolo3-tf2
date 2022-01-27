@@ -57,6 +57,7 @@ def yolo_body(input_shape, anchors_mask, num_classes):
     #   y2=(batch_size,26,26,3,85)
     #---------------------------------------------------#
     # 26,26,768 -> 26,26,256 -> 26,26,512 -> 26,26,256 -> 26,26,512 -> 26,26,256
+    # 先堆叠，然后make_yolo_head()
     x   = make_five_conv(x, 256)
     P4  = make_yolo_head(x, 256, len(anchors_mask[1]) * (num_classes+5))
 
@@ -77,6 +78,9 @@ def yolo_body(input_shape, anchors_mask, num_classes):
 def get_train_model(model_body, input_shape, num_classes, anchors, anchors_mask):
     y_true = [Input(shape = (input_shape[0] // {0:32, 1:16, 2:8}[l], input_shape[1] // {0:32, 1:16, 2:8}[l], \
                                 len(anchors_mask[l]), num_classes + 5)) for l in range(len(anchors_mask))]
+    print("________________")
+    print("y_true: {}".format(y_true))
+    print("________________")
     model_loss  = Lambda(
         yolo_loss, 
         output_shape    = (1, ), 

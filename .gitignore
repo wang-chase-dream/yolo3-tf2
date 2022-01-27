@@ -2,3 +2,5 @@ darknet53_backbone_weights.h5
 yolo_weights.h5
 VOC07+12+test.zip
 VOC07+12+test
+2007_train.txt
+2007_val.txt
