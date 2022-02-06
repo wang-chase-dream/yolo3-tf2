@@ -10,6 +10,8 @@ from utils.utils import cvtColor, preprocess_input
 
 
 class YoloDatasets(keras.utils.Sequence):
+    
+    # annotation_lines: a list of the result of file("2007_train.txt").readlines()
     def __init__(self, annotation_lines, input_shape, anchors, batch_size, num_classes, anchors_mask, train):
         self.annotation_lines   = annotation_lines
         self.length             = len(self.annotation_lines)

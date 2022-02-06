@@ -50,7 +50,7 @@ if __name__ == "__main__":
     #   anchors_mask用于帮助代码找到对应的先验框，一般不修改。
     #---------------------------------------------------------------------#
     anchors_path    = 'model_data/yolo_anchors.txt'
-    anchors_mask    = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
+    anchors_mask    = [[6, 7, 8], [3, 4, 5], [0, 1, 2]] # 数字没什么含义，应该就形状比较重要
     #----------------------------------------------------------------------------------------------------------------------------#
     #   权值文件的下载请看README，可以通过网盘下载。模型的 预训练权重 对不同数据集是通用的，因为特征是通用的。
     #   模型的 预训练权重 比较重要的部分是 主干特征提取网络的权值部分，用于进行特征提取。
@@ -207,6 +207,8 @@ if __name__ == "__main__":
                             end_epoch, input_shape, anchors, anchors_mask, num_classes)
 
         else:
+            # 以我的理解，因为构成的model输出的就是 y_pred(因为model的最后一层是yolo_loss)
+            # 所以，这里的loss函数就是一个简单的lambda函数直接返回，y_pred即可
             model.compile(optimizer=Adam(lr = lr), loss={'yolo_loss': lambda y_true, y_pred: y_pred})
 
             model.fit_generator(
@@ -220,6 +222,12 @@ if __name__ == "__main__":
                 workers             = num_workers,
                 callbacks           = [logging, checkpoint, reduce_lr, early_stopping, loss_history]
             )
+
+
+
+
+
+
 
     if Freeze_Train:
         for i in range(freeze_layers): model_body.layers[i].trainable = True

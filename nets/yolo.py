@@ -1,6 +1,7 @@
 from tensorflow.keras.layers import Concatenate, Input, Lambda, UpSampling2D
 from tensorflow.keras.models import Model
 from utils.utils import compose
+from tensorflow import keras
 
 from nets.darknet import DarknetConv2D, DarknetConv2D_BN_Leaky, darknet_body
 from nets.yolo_training import yolo_loss
@@ -44,6 +45,7 @@ def yolo_body(input_shape, anchors_mask, num_classes):
     #---------------------------------------------------#
     # 13,13,1024 -> 13,13,512 -> 13,13,1024 -> 13,13,512 -> 13,13,1024 -> 13,13,512
     x   = make_five_conv(C5, 512)
+    # Each bounding box consists of 5 predictions: x, y, w, h, and confidence.
     print("P5_output: {}".format(len(anchors_mask[0]) * (num_classes+5)))
     P5  = make_yolo_head(x, 512, len(anchors_mask[0]) * (num_classes+5))
     print("P5.shape: {}".format(P5.shape))
@@ -75,9 +77,12 @@ def yolo_body(input_shape, anchors_mask, num_classes):
     return Model(inputs, [P5, P4, P3], name = "yolo_body")
 
 
+# model_body是 Darknet + FPN + head
+# *model_body.output is P5, P4, P3
 def get_train_model(model_body, input_shape, num_classes, anchors, anchors_mask):
+    # l = 0, 1, 2
     y_true = [Input(shape = (input_shape[0] // {0:32, 1:16, 2:8}[l], input_shape[1] // {0:32, 1:16, 2:8}[l], \
-                                len(anchors_mask[l]), num_classes + 5)) for l in range(len(anchors_mask))]
+                                len(anchors_mask[l]), num_classes + 5)) for l in range(len(anchors_mask))] 
     print("________________")
     print("y_true: {}".format(y_true))
     print("________________")
@@ -87,5 +92,17 @@ def get_train_model(model_body, input_shape, num_classes, anchors, anchors_mask)
         name            = 'yolo_loss', 
         arguments       = {'input_shape' : input_shape, 'anchors' : anchors, 'anchors_mask' : anchors_mask, 'num_classes' : num_classes}
     )([*model_body.output, *y_true])
+    print("-------------------------")
+    print("*model_body.output")
+    print(*model_body.output)
+    print("*y_true")
+    print(*y_true)
+    print("-------------------------")
+    
+    # [model_body.input, *y_true] 并列关系
     model       = Model([model_body.input, *y_true], model_loss)
+    # keras.utils.plot_model(model, "my_first_model_with_shape_info.png", show_shapes=True)
+    print("model.summary()")
+    print(model.summary())
+    input()
     return model
