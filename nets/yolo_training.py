@@ -11,7 +11,7 @@ def box_iou(b1, b2):
     #   num_anchor,1,4
     #   计算左上角的坐标和右下角的坐标
     #---------------------------------------------------#
-    b1          = K.expand_dims(b1, -2)
+    b1          = K.expand_dims(b1, -2) # b1.shape = (13,13,3,1,4)
     b1_xy       = b1[..., :2]
     b1_wh       = b1[..., 2:4]
     b1_wh_half  = b1_wh/2.
@@ -22,7 +22,7 @@ def box_iou(b1, b2):
     #   1,n,4
     #   计算左上角和右下角的坐标
     #---------------------------------------------------#
-    b2          = K.expand_dims(b2, 0)
+    b2          = K.expand_dims(b2, 0) # shape = (1,n,4)
     b2_xy       = b2[..., :2]
     b2_wh       = b2[..., 2:4]
     b2_wh_half  = b2_wh/2.
@@ -39,11 +39,12 @@ def box_iou(b1, b2):
     b1_area         = b1_wh[..., 0] * b1_wh[..., 1]
     b2_area         = b2_wh[..., 0] * b2_wh[..., 1]
     iou             = intersect_area / (b1_area + b2_area - intersect_area)
-
+    # Should be iou.shape = (13,13,3,n)
     return iou
 
 #---------------------------------------------------#
 #   loss值计算
+#   anchors.shape: (9, 2) 
 #---------------------------------------------------#
 def yolo_loss(args, input_shape, anchors, anchors_mask, num_classes, ignore_thresh=.5, print_loss=False):
     num_layers = len(anchors_mask)
@@ -90,7 +91,7 @@ def yolo_loss(args, input_shape, anchors, anchors_mask, num_classes, ignore_thre
         #   以第一个特征层(m,13,13,3,85)为例子
         #   取出该特征层中存在目标的点的位置。(m,13,13,3,1)
         #-----------------------------------------------------------#
-        object_mask = y_true[l][..., 4:5]
+        object_mask = y_true[l][..., 4:5] # 置信度 shape = (m,13,13,3, 1)
         #-----------------------------------------------------------#
         #   取出其对应的种类(m,13,13,3,80)
         #-----------------------------------------------------------#
@@ -125,7 +126,10 @@ def yolo_loss(args, input_shape, anchors, anchors_mask, num_classes, ignore_thre
         def loop_body(b, ignore_mask):
             #-----------------------------------------------------------#
             #   取出n个真实框：n,4
+            #   object_mask_bool[b,...,0].shape = (13,13,3)
+            #   y_true[l][b,...,0:4].shape = (13, 13, 3, 4)
             #-----------------------------------------------------------#
+            
             true_box = tf.boolean_mask(y_true[l][b,...,0:4], object_mask_bool[b,...,0])
             #-----------------------------------------------------------#
             #   计算预测框与真实框的iou

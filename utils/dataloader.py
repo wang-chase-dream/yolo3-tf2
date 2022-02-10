@@ -12,9 +12,11 @@ from utils.utils import cvtColor, preprocess_input
 class YoloDatasets(keras.utils.Sequence):
     
     # annotation_lines: a list of the result of file("2007_train.txt").readlines()
+    # input_shape: [416, 416]
+    # anchors: 代表9个先验框的大小
     def __init__(self, annotation_lines, input_shape, anchors, batch_size, num_classes, anchors_mask, train):
         self.annotation_lines   = annotation_lines
-        self.length             = len(self.annotation_lines)
+        self.length             = len(self.annotation_lines) # number of images
         
         self.input_shape        = input_shape
         self.anchors            = anchors
@@ -24,10 +26,12 @@ class YoloDatasets(keras.utils.Sequence):
         self.train              = train
 
     def __len__(self):
+        """Return the number of batch in the Sequence."""
         # Round a number upward to its nearest integer:
         return math.ceil(len(self.annotation_lines) / float(self.batch_size))
 
     def __getitem__(self, index):
+        """Gets batch at position index."""
         image_data  = []
         box_data    = []
         for i in range(index * self.batch_size, (index + 1) * self.batch_size):  
@@ -37,9 +41,11 @@ class YoloDatasets(keras.utils.Sequence):
             #   验证时不进行数据的随机增强
             #---------------------------------------------------#
             image, box  = self.get_random_data(self.annotation_lines[i], self.input_shape, random = self.train)
+            
             image_data.append(preprocess_input(np.array(image)))
             box_data.append(box)
 
+        # box_data.shape = (batch_size,100,5) may be
         image_data  = np.array(image_data)
         box_data    = np.array(box_data)
         y_true      = self.preprocess_true_boxes(box_data, self.input_shape, self.anchors, self.num_classes)
@@ -66,6 +72,7 @@ class YoloDatasets(keras.utils.Sequence):
         shuffle(self.annotation_lines)
 
     def rand(self, a=0, b=1):
+        """随机生成一个 范围 [a, b) 的数"""
         return np.random.rand()*(b-a) + a
 
     def get_random_data(self, annotation_line, input_shape, max_boxes=100, jitter=.3, hue=.1, sat=1.5, val=1.5, random=True):
@@ -84,6 +91,7 @@ class YoloDatasets(keras.utils.Sequence):
         #   获得预测框
         #------------------------------#
         # list(map(int,box.split(',')))) 把 str 转换成 int [1,2,3,4]
+        # box.shape = (num_of_targets, 5)
         box     = np.array([np.array(list(map(int,box.split(',')))) for box in line[1:]])
 
         if not random:
@@ -182,9 +190,11 @@ class YoloDatasets(keras.utils.Sequence):
             box = box[np.logical_and(box_w>1, box_h>1)] # discard invalid box
             if len(box)>max_boxes: box = box[:max_boxes]
             box_data[:len(box)] = box
-        
+        # box.shape = (100,5)
         return image_data, box_data
 
+
+    # true_boxes: true boxes.shape = (batch_size,100,5)
     def preprocess_true_boxes(self, true_boxes, input_shape, anchors, num_classes):
         assert (true_boxes[..., 4]<num_classes).all(), 'class id must be less than num_classes'
         #-----------------------------------------------------------#
@@ -212,7 +222,7 @@ class YoloDatasets(keras.utils.Sequence):
         #   通过计算获得真实框的中心和宽高
         #   中心点(m,n,2) 宽高(m,n,2)
         #-----------------------------------------------------------#
-        boxes_xy = (true_boxes[..., 0:2] + true_boxes[..., 2:4]) // 2
+        boxes_xy = (true_boxes[..., 0:2] + true_boxes[..., 2:4]) // 2 # 得出一系列中心点
         boxes_wh =  true_boxes[..., 2:4] - true_boxes[..., 0:2]
         #-----------------------------------------------------------#
         #   将真实框归一化到小数形式
@@ -229,6 +239,9 @@ class YoloDatasets(keras.utils.Sequence):
 
         #-----------------------------------------------------------#
         #   长宽要大于0才有效
+        #   对于每一张图片，都有100个 boxes, 每个boxes有5个参数
+        #   但是，只有前面几个box是有效的，后面都是 0,所以valid_mask判断出
+        #   对于每张图片那几个box是有效的
         #-----------------------------------------------------------#
         valid_mask = boxes_wh[..., 0]>0
 
@@ -237,13 +250,13 @@ class YoloDatasets(keras.utils.Sequence):
             #   对每一张图进行处理
             #-----------------------------------------------------------#
             wh = boxes_wh[b, valid_mask[b]]
-            if len(wh) == 0: continue
+            if len(wh) == 0: continue # 说明这张图片没有包含需要检测的物体
             #-----------------------------------------------------------#
             #   [n,2] -> [n,1,2]
             #-----------------------------------------------------------#
-            wh          = np.expand_dims(wh, -2)
-            box_maxes   = wh / 2.
-            box_mins    = - box_maxes
+            wh          = np.expand_dims(wh, -2) # shape = (n,1,2)
+            box_maxes   = wh / 2. # shape = (n,1,2)
+            box_mins    = - box_maxes # shape = (n,1,2)
 
             #-----------------------------------------------------------#
             #   计算所有真实框和先验框的交并比
@@ -264,7 +277,7 @@ class YoloDatasets(keras.utils.Sequence):
             #-----------------------------------------------------------#
             #   维度是[n,] 感谢 消尽不死鸟 的提醒
             #-----------------------------------------------------------#
-            best_anchor = np.argmax(iou, axis=-1)
+            best_anchor = np.argmax(iou, axis=-1) # 返回最大值的index
 
             for t, n in enumerate(best_anchor):
                 #-----------------------------------------------------------#
@@ -294,4 +307,5 @@ class YoloDatasets(keras.utils.Sequence):
                         y_true[l][b, j, i, k, 4] = 1
                         y_true[l][b, j, i, k, 5+c] = 1
 
+        #   y_true的格式为(m,13,13,3,85)(m,26,26,3,85)(m,52,52,3,85)
         return y_true
